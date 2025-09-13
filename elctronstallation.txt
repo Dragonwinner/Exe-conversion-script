@@ -1,0 +1,199 @@
+1. If you want a desktop app (with browser window)
+
+Use Electron or Tauri to wrap your Vite build.
+
+Using Electron
+
+Install dependencies:
+
+npm install --save-dev electron electron-builder
+
+
+Add main.js (Electron entry file):
+
+const { app, BrowserWindow } = require("electron");
+const path = require("path");
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1000,
+    height: 700,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+
+  win.loadFile("dist/index.html");
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
+
+
+Build your Vite app:
+
+npm run build
+
+
+(This creates a dist/ folder with static files)
+
+Package into .exe:
+Add this in package.json:
+
+"main": "main.js",
+"scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "electron": "electron .",
+  "dist": "electron-builder"
+},
+"build": {
+  "appId": "com.typingmaster.app",
+  "productName": "TypingMaster",
+  "win": {
+    "target": "nsis"
+  }
+}
+
+
+Then run:
+
+npm run dist
+
+
+→ You’ll get a setup.exe in the dist/ folder.
+
+🔹 2. If you just want a single .exe webserver
+
+You can bundle Node.js + your Vite build using pkg.
+
+Build the app:
+
+npm run build
+
+
+Install pkg:
+
+npm install -g pkg
+
+
+Create a simple server (server.js):
+
+const express = require("express");
+const path = require("path");
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.static(path.join(__dirname, "dist")));
+
+app.listen(PORT, () => {
+  console.log(`App running at http://localhost:${PORT}`);
+});
+
+
+Update package.json:
+
+"bin": "server.js"
+
+
+Package into exe:
+
+pkg server.js --targets node20-win-x64 --output TypingMaster.exe
+
+
+→ Now you have a TypingMaster.exe which runs a local server and serves your Vite app.
+
+⚡ Recommendation:
+
+If you want it to look like a real desktop app → Electron (Option 1).
+
+If you just need a portable exe server → pkg + Express (Option 2).
+
+👉 Do you want me to prepare the Electron setup (desktop app) for your Typing Master Project so you can directly build .exe, or do you prefer the lighter pkg server approach?
+
+You said:
+WHICH PATH I ADD MAIN.JS?
+
+ChatGPT said:
+
+Good question 👍
+
+In your Vite project, you already have folders like:
+
+src/
+  App.tsx
+  components/
+  data/
+dist/      <-- created after `npm run build`
+package.json
+vite.config.ts
+
+
+Now, for Electron, the main.js is not part of src/. It sits at the root of your project, next to package.json.
+
+So your project structure should look like this:
+
+your-project/
+│
+├─ src/                  # React + Vite source code
+├─ dist/                 # Build output (created after `npm run build`)
+├─ package.json
+├─ vite.config.ts
+├─ main.js               # <-- Add this file here
+└─ preload.js (optional) # if you want, can also sit here
+
+✅ Steps:
+
+Create main.js at the project root.
+
+const { app, BrowserWindow } = require("electron");
+const path = require("path");
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1000,
+    height: 700,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+
+  win.loadFile("dist/index.html"); // Serve Vite build
+}
+
+app.whenReady().then(() => {
+  createWindow();
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
+
+
+(Optional) Create preload.js in the same folder (root):
+
+// preload.js
+window.addEventListener("DOMContentLoaded", () => {
+  console.log("Electron app loaded!");
+});
+
+
+Build React + Vite:
+
+npm run build
+
+
+Run Electron:
+
+npm run electron
